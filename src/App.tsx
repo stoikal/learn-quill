@@ -1,14 +1,10 @@
-import './App.css'
+// import './App.css'
+import TextEditor from './components/TextEditor'
 
 function App() {
-
-
   return (
     <>
-
-      <p className="read-the-docs">
-        hello world
-      </p>
+      <TextEditor />
     </>
   )
 }
