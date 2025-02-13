@@ -1,9 +1,55 @@
-import React, { useState, useRef } from 'react';
-import { EditorContent, useEditor } from '@tiptap/react';
+import React, { useState } from 'react';
+import { EditorContent, useEditor, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
 import Code from '@tiptap/extension-code';
 import Image from '@tiptap/extension-image'
+import TextAlign from '@tiptap/extension-text-align'
+
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import html from 'highlight.js/lib/languages/xml'
+import { createLowlight } from 'lowlight'
+import CodeBlockComponent from './CodeBlockComponent'
+
+const lowlight = createLowlight()
+
+lowlight.register('html', html)
+
+
+const MenuBar = ({ editor, isEditingHtml, onToggleEditHtml }) => {
+  if (!editor) {
+    return null
+  }
+
+  return (
+    <div className="control-group">
+      <div className="button-group">
+        <button
+          disabled={isEditingHtml}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          className={editor.isActive('heading', { level: 1 }) ? 'is-active' : ''}
+        >
+          H1
+        </button>
+        <button disabled={isEditingHtml} onClick={() => editor.chain().focus().setTextAlign('left').run()} className={editor.isActive({ textAlign: 'left' }) ? 'is-active' : ''}>
+          Left
+        </button>
+        <button disabled={isEditingHtml} onClick={() => editor.chain().focus().setTextAlign('center').run()} className={editor.isActive({ textAlign: 'center' }) ? 'is-active' : ''}>
+          Center
+        </button>
+        <button disabled={isEditingHtml} onClick={() => editor.chain().focus().setTextAlign('right').run()} className={editor.isActive({ textAlign: 'right' }) ? 'is-active' : ''}>
+          Right
+        </button>
+        <button disabled={isEditingHtml} onClick={() => editor.chain().focus().setTextAlign('justify').run()} className={editor.isActive({ textAlign: 'justify' }) ? 'is-active' : ''}>
+          Justify
+        </button>
+        <button onClick={onToggleEditHtml}>
+          {isEditingHtml ? 'Visual Edit' : 'HTML Edit'}
+        </button>
+      </div>
+    </div>
+  )
+}
 // import './style.css';
 
 const Tiptap = () => {
@@ -16,7 +62,17 @@ const Tiptap = () => {
       StarterKit,
       Highlight,
       Code,
-      Image
+      Image,
+      CodeBlockLowlight
+        .extend({
+          addNodeView() {
+            return ReactNodeViewRenderer(CodeBlockComponent)
+          },
+        })
+        .configure({ lowlight }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+      }),
     ],
     onUpdate: ({ editor }) => {
       if (!isEditingHTML) { 
@@ -34,7 +90,26 @@ const Tiptap = () => {
   }
 
   const handleToggleHTMLMode = () => {
+    
+    if (!isEditingHTML) {
+      const code = editor.getHTML()
+      // editor.commands.setContent(`<pre><code>${editor.getHTML()}</code></pre>`);
+      editor.chain().setContent({
+        type: 'codeBlock', 
+        content: [{
+          type: 'text',
+          text: format(code, "\n\t"),
+        }],
+      }).run();
+    } else {
+      const json = editor.getJSON()
+      console.log('===~json~===', '👀', json);
+      editor.commands.setContent(editor.getText());
+
+    }
+    
     setIsEditingHTML(!isEditingHTML);
+    return
 
     if (isEditingHTML) { 
       try {
@@ -55,8 +130,14 @@ const Tiptap = () => {
   return (
     <div className="container">
       <div>
-        <h2>Editor</h2>
-        {!isEditingHTML ? (
+        <MenuBar
+          editor={editor}
+          isEditingHtml={isEditingHTML}
+          onToggleEditHtml={handleToggleHTMLMode}
+        />
+        <EditorContent editor={editor} />
+
+        {/* {!isEditingHTML ? (
           <EditorContent editor={editor} />
         ) : (
           <textarea
@@ -68,18 +149,15 @@ const Tiptap = () => {
               fontFamily: "monospace"
             }}
           />
-        )}
+        )} */}
         <br />
-        <button onClick={handleToggleHTMLMode}>
-          {isEditingHTML ? 'Visual Edit' : 'HTML Edit'}
-        </button>
       </div>
-      <div>
+      {/* <div>
         <h3>html:</h3>
         <pre id="html-output">{html}</pre>
         <h3>isEditingHTML:</h3>
         <p>{String(isEditingHTML)}</p>
-      </div>
+      </div> */}
     </div>
   );
 };
@@ -99,7 +177,7 @@ function format(html) {
 
       result += indent + '<' + element + '>\r\n';
 
-      if (element.match( /^<?\w[^>]*[^\/]$/ ) && !element.startsWith("input")  ) { 
+      if (element.match( /^<?\w[^>]*[^\/]$/ ) && (!element.startsWith("input") || !element.startsWith("img") ) ) { 
           indent += tab;              
       }
   });
