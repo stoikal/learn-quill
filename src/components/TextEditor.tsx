@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { EditorContent, useEditor, ReactNodeViewRenderer } from '@tiptap/react';
+import { useState } from 'react';
+import { EditorContent, useEditor, ReactNodeViewRenderer, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
 import Code from '@tiptap/extension-code';
@@ -11,12 +11,20 @@ import html from 'highlight.js/lib/languages/xml'
 import { createLowlight } from 'lowlight'
 import CodeBlockComponent from './CodeBlockComponent'
 
+import {prettify, UserConfig} from "htmlfy"
+
 const lowlight = createLowlight()
 
 lowlight.register('html', html)
 
+type MenuBarProps = {
+  editor: Editor;
+  isEditingHtml: boolean;
+  onToggleEditHtml: () => void;
+}
 
-const MenuBar = ({ editor, isEditingHtml, onToggleEditHtml }) => {
+
+const MenuBar = ({ editor, isEditingHtml, onToggleEditHtml }: MenuBarProps) => {
   if (!editor) {
     return null
   }
@@ -53,7 +61,6 @@ const MenuBar = ({ editor, isEditingHtml, onToggleEditHtml }) => {
 // import './style.css';
 
 const Tiptap = () => {
-  const [html, setHtml] = useState('');
   const [isEditingHTML, setIsEditingHTML] = useState(false);
 
   const editor = useEditor({
@@ -74,14 +81,14 @@ const Tiptap = () => {
         types: ['heading', 'paragraph'],
       }),
     ],
-    onUpdate: ({ editor }) => {
-      if (!isEditingHTML) { 
-        const newHtml = editor.getHTML();
-        setHtml(
-          format(newHtml)
-        );
-      }
-    },
+    // onUpdate: ({ editor }) => {
+    //   if (!isEditingHTML) { 
+    //     const newHtml = editor.getHTML();
+    //     setHtml(
+    //       prettify(newHtml)
+    //     );
+    //   }
+    // },
     
   });
 
@@ -98,33 +105,15 @@ const Tiptap = () => {
         type: 'codeBlock', 
         content: [{
           type: 'text',
-          text: format(code, "\n\t"),
+          text: prettify(code, { char: " ", count: 4 } as UserConfig),
         }],
       }).run();
     } else {
-      const json = editor.getJSON()
-      console.log('===~json~===', '👀', json);
       editor.commands.setContent(editor.getText());
 
     }
     
     setIsEditingHTML(!isEditingHTML);
-    return
-
-    if (isEditingHTML) { 
-      try {
-        editor.commands.setContent(html); 
-      } catch (error) {
-        console.error("Error setting content from HTML:", error);
-
-      }
-    } else { 
-      setHtml(format(editor.getHTML())); 
-    }
-  };
-
-  const handleHTMLChange = (event: any) => {
-    setHtml(event.target.value);
   };
 
   return (
@@ -136,51 +125,11 @@ const Tiptap = () => {
           onToggleEditHtml={handleToggleHTMLMode}
         />
         <EditorContent editor={editor} />
-
-        {/* {!isEditingHTML ? (
-          <EditorContent editor={editor} />
-        ) : (
-          <textarea
-            className="html-editor"
-            value={html}
-            onChange={handleHTMLChange}
-            style={{
-              whiteSpace: "pre-wrap",
-              fontFamily: "monospace"
-            }}
-          />
-        )} */}
         <br />
       </div>
-      {/* <div>
-        <h3>html:</h3>
-        <pre id="html-output">{html}</pre>
-        <h3>isEditingHTML:</h3>
-        <p>{String(isEditingHTML)}</p>
-      </div> */}
     </div>
   );
 };
 
 
 export default Tiptap;
-
-function format(html) {
-  var tab = '\t';
-  var result = '';
-  var indent= '';
-
-  html.split(/>\s*</).forEach(function(element) {
-      if (element.match( /^\/\w/ )) {
-          indent = indent.substring(tab.length);
-      }
-
-      result += indent + '<' + element + '>\r\n';
-
-      if (element.match( /^<?\w[^>]*[^\/]$/ ) && (!element.startsWith("input") || !element.startsWith("img") ) ) { 
-          indent += tab;              
-      }
-  });
-
-  return result.substring(1, result.length-3);
-}
