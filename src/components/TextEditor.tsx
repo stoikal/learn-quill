@@ -12,6 +12,7 @@ import { createLowlight } from 'lowlight'
 import CodeBlockComponent from './CodeBlockComponent'
 
 import {prettify, UserConfig} from "htmlfy"
+import { initialContent } from './initialContent';
 
 const lowlight = createLowlight()
 
@@ -64,7 +65,7 @@ const Tiptap = () => {
   const [isEditingHTML, setIsEditingHTML] = useState(false);
 
   const editor = useEditor({
-    content: '',
+    content: initialContent,
     extensions: [
       StarterKit,
       Highlight,
